@@ -1,5 +1,7 @@
+import random
 import torch 
 import torch.nn as nn
+import numpy as np
 from gan1 import Generator
 from classifier import Classifier
 from adapter import Adapter
@@ -78,17 +80,73 @@ if __name__ == '__main__':
     classifier_children = list(classifier.children())
 
     classifier_base_layers = get_base_layers(classifier_children)
+    # for i in range(10): 
+    num_exp = 1000
+    
+    classic_scores = list()
+    adapter_scores = list()
+    adapter_noise_scores = list()
+    no_adapter_noise_scores = list()
+    for j in range(10): 
+        classic_score = 0
+        adapter_score = 0
+        adapter_noise_score = 0
+        no_adapter_noise_score = 0
+        for i in range(num_exp): 
 
-    z = torch.randn(1, 100)
-    label = torch.tensor([9])
+            random_number = random.randint(1, 9)
 
-    generator_out = pass_value_throgh_generator(z, label, generator_base_layers)
+            z = torch.randn(1, 100)
+            label = torch.tensor([random_number])
 
-    adapter_out = adapter(generator_out)
+            # ADAPTER
+            generator_out = pass_value_throgh_generator(z, label, generator_base_layers)
 
-    classifier_out = pass_value_throgh_classifier(adapter_out, classifier_base_layers)
+            adapter_out = adapter(generator_out)
 
-    print(classifier_out)
+            classifier_out = pass_value_throgh_classifier(adapter_out, classifier_base_layers)
 
-    _, predicted = torch.max(classifier_out.data, 1)
-    print(predicted)
+            _, adapter_predicted = torch.max(classifier_out.data, 1)
+
+            #  ADAPTER NOISE
+            z_test = torch.randn_like(generator_out)
+
+            adapter_out = adapter(z_test)
+
+            classifier_out = pass_value_throgh_classifier(adapter_out, classifier_base_layers)
+
+            _, adapter_noise_predicted = torch.max(classifier_out.data, 1)
+
+            # CLASSIC 
+            generated_image = generator(z, label).view(1, 28, 28)
+
+            generated_image = torch.unsqueeze(generated_image, dim=0)
+
+            out = classifier(generated_image)
+
+            _, classic_predicted = torch.max(out.data, 1)
+
+            #NO ADAPTER NOISE 
+            z_test = torch.randn_like(generated_image)
+            out = classifier(z_test)
+
+            _, no_adapter_noise_predicted = torch.max(out.data, 1)
+
+            if classic_predicted == random_number: 
+                classic_score += 1 
+            if adapter_predicted == random_number: 
+                adapter_score += 1
+            if adapter_noise_predicted == random_number: 
+                adapter_noise_score += 1
+            if no_adapter_noise_predicted == random_number:
+                no_adapter_noise_score += 1
+
+        classic_scores.append(classic_score/num_exp)
+        adapter_scores.append(adapter_score/num_exp)
+        adapter_noise_scores.append(adapter_noise_score/num_exp)
+        no_adapter_noise_scores.append(no_adapter_noise_score/num_exp) 
+
+    print(f"Classic accuracy: {np.mean(classic_scores)} +- {np.std(classic_scores)}")
+    print(f"Adapter accuracy: {np.mean(adapter_scores)} +- {np.std(adapter_scores)}")
+    print(f"Adapter noise accuracy: {np.mean(adapter_noise_scores)} +- {np.std(adapter_noise_scores)}")
+    print(f"No adapter noise accuracy: {np.mean(no_adapter_noise_scores)} +- {np.std(no_adapter_noise_scores)}")
