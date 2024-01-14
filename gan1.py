@@ -9,9 +9,13 @@ import os
 import matplotlib.pyplot as pyplot
 
 
-os.makedirs('second1', exist_ok=True)
-os.makedirs('second_gan_model', exist_ok=True)
+os.makedirs('demo_gan', exist_ok=True)
+os.makedirs('demo_gan_model', exist_ok=True)
+os.makedirs('demo_gan_losses', exist_ok=True)
             
+
+file_losses = open('demo_gan_losses/losses.txt', 'w')
+file_losses.write('Epoch,Batch,D_loss_real,D_loss_fake,G_loss\n')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -162,6 +166,7 @@ if __name__ == '__main__':
             if (i + 1) % 100 == 0:
                 print(f'Epoch [{epoch + 1}/{num_epochs}], Batch [{i + 1}/{len(data_loader)}], '
                     f'D_loss_real: {d_loss_real.item():.4f}, D_loss_fake: {d_loss_fake.item():.4f}, G_loss: {g_loss.item():.4f}')
+                file_losses.write(f'{epoch}, {i}, {d_loss_real.item():.4f}, {d_loss_fake.item():.4f}, {g_loss.item():.4f}\n')
 
         # Generate and save a sample of fake images
         if (epoch + 1) % 10 == 0:
@@ -178,7 +183,9 @@ if __name__ == '__main__':
                     plt.imshow(generated_image[0], cmap='gray')
                     plt.axis('off')
                     plt.title(f'Digit {digit}')
-                plt.savefig(f'second1/gan_generated_epoch_{epoch + 1}.png')
+                plt.savefig(f'demo_gan/gan_generated_epoch_{epoch + 1}.png')
                 plt.close()
 
-                torch.save(generator.state_dict(), 'second_gan_model/generator_{epoch + 1}.pth')
+                torch.save(generator.state_dict(), 'demo_gan_model/generator_{epoch + 1}.pth')
+
+    file_losses.close()

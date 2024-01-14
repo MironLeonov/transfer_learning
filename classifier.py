@@ -7,8 +7,7 @@ from sklearn.model_selection import KFold
 import os 
 
 
-os.makedirs('classifier_model', exist_ok=True)
-
+os.makedirs('demo_classifier_model', exist_ok=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -59,102 +58,111 @@ kfold = KFold(n_splits=k_folds, shuffle=True)
 # data_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
 
 if __name__ == '__main__': 
-    # results = {}
+    results = {}
 
-    # for fold, (train_ids, test_ids) in enumerate(kfold.split(dataset)): 
-    #     print(f"FOLD: {fold}")
+    for fold, (train_ids, test_ids) in enumerate(kfold.split(dataset)): 
+        print(f"FOLD: {fold}")
+        file_losses = open(f'demo_classifier_losses_fold_{fold}.txt', 'w')
+        file_losses.write('epoch, batch, loss\n')
+        # file_losses.write(f"FOLD: {fold}")
 
 
-    #     train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
-    #     test_subsampler = torch.utils.data.SubsetRandomSampler(test_ids)
+        train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
+        test_subsampler = torch.utils.data.SubsetRandomSampler(test_ids)
         
-    #     trainloader = torch.utils.data.DataLoader(
-    #                     dataset, 
-    #                     batch_size=10, sampler=train_subsampler)
-    #     testloader = torch.utils.data.DataLoader(
-    #                     dataset,
-    #                     batch_size=10, sampler=test_subsampler)
+        trainloader = torch.utils.data.DataLoader(
+                        dataset, 
+                        batch_size=10, sampler=train_subsampler)
+        testloader = torch.utils.data.DataLoader(
+                        dataset,
+                        batch_size=10, sampler=test_subsampler)
         
-    #     model = Classifier().to(device)
-    #     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    #     criterion = nn.CrossEntropyLoss()
+        model = Classifier().to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        criterion = nn.CrossEntropyLoss()
 
-    #     for epoch in range(0, num_epochs):
+        for epoch in range(0, num_epochs):
 
-    #         print(f'Starting epoch {epoch+1}')
+            print(f'Starting epoch {epoch+1}')
 
-    #         current_loss = 0.0
-    #         for i, data in enumerate(trainloader, 0):
+            current_loss = 0.0
+            for i, data in enumerate(trainloader, 0):
                 
-    #             inputs, targets = data
+                inputs, targets = data
 
-    #             inputs = inputs.to(device)
-    #             targets = targets.to(device)
+                inputs = inputs.to(device)
+                targets = targets.to(device)
                 
-    #             optimizer.zero_grad()
+                optimizer.zero_grad()
                 
-    #             outputs = model(inputs)
+                outputs = model(inputs)
                 
-    #             loss = criterion(outputs, targets)
-    #             loss.backward()
+                loss = criterion(outputs, targets)
+                loss.backward()
 
-    #             optimizer.step()
+                optimizer.step()
                 
-    #             current_loss += loss.item()
-    #             if i % 500 == 499:
-    #                 print('Loss after mini-batch %5d: %.3f' %
-    #                     (i + 1, current_loss / 500))
-    #                 current_loss = 0.0
+                current_loss += loss.item()
+                file_losses.write(f'{epoch+1}, {i}, {loss.item()}\n')
+                if i % 500 == 499:
+                    print('Loss after mini-batch %5d: %.3f' %
+                        (i + 1, current_loss / 500))
+                    current_loss = 0.0
+
+                # if fold == 3: 
+
+
+        print('Training process has finished. Saving trained model.')
             
-    #     print('Training process has finished. Saving trained model.')
-            
-    #     print('Starting testing')
+        print('Starting testing')
         
-    #     save_path = f'classifier_model/model-fold-{fold}.pth'
-    #     torch.save(model.state_dict(), save_path)
+        save_path = f'demo_classifier_model/model-fold-{fold}.pth'
+        torch.save(model.state_dict(), save_path)
 
-    #     correct, total = 0, 0
-    #     with torch.no_grad():
-    #         for i, data in enumerate(testloader, 0):
+        correct, total = 0, 0
+        with torch.no_grad():
+            for i, data in enumerate(testloader, 0):
 
-    #             inputs, targets = data
+                inputs, targets = data
 
-    #             inputs = inputs.to(device)
-    #             targets = targets.to(device)
+                inputs = inputs.to(device)
+                targets = targets.to(device)
 
-    #             outputs = model(inputs)
+                outputs = model(inputs)
 
-    #             _, predicted = torch.max(outputs.data, 1)
-    #             total += targets.size(0)
-    #             correct += (predicted == targets).sum().item()
+                _, predicted = torch.max(outputs.data, 1)
+                total += targets.size(0)
+                correct += (predicted == targets).sum().item()
 
-    #     print('Accuracy for fold %d: %d %%' % (fold, 100.0 * correct / total))
-    #     print('--------------------------------')
-    #     results[fold] = 100.0 * (correct / total)
+        print('Accuracy for fold %d: %d %%' % (fold, 100.0 * correct / total))
+        print('--------------------------------')
+        # file_losses.write(f'{epoch+1}, {i}, {current_loss}')
+        results[fold] = 100.0 * (correct / total)
+        file_losses.close()
     
 
-    # print(f'K-FOLD CROSS VALIDATION RESULTS FOR {k_folds} FOLDS')
-    # print('--------------------------------')
-    # sum = 0.0
-    # for key, value in results.items():
-    #     print(f'Fold {key}: {value} %')
-    #     sum += value
-    # print(f'Average: {sum/len(results.items())} %')
+    print(f'K-FOLD CROSS VALIDATION RESULTS FOR {k_folds} FOLDS')
+    print('--------------------------------')
+    sum = 0.0
+    for key, value in results.items():
+        print(f'Fold {key}: {value} %')
+        sum += value
+    print(f'Average: {sum/len(results.items())} %')
             
 
     # print(type(train_set))
-    model = Classifier()
-    data_loader = DataLoader(dataset=dataset_test_part, batch_size=batch_size, shuffle=True)
+    # model = Classifier()
+    # data_loader = DataLoader(dataset=dataset_test_part, batch_size=batch_size, shuffle=True)
 
-    for i, data in enumerate(data_loader): 
-        real_images, real_classes = data
-        print(real_images.shape)
+    # for i, data in enumerate(data_loader): 
+    #     real_images, real_classes = data
+    #     print(real_images.shape)
         
-        out = model(real_images)
-        print(out.shape)
-    #     print(out)
+    #     out = model(real_images)
+    #     print(out.shape)
+    # #     print(out)
 
-        break
+    #     break
 
 
 
