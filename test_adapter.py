@@ -16,7 +16,7 @@ classifier.load_state_dict(torch.load('classifier_model\model-fold-3.pth'))
 classifier.eval()
 
 adapter = Adapter()
-adapter.load_state_dict(torch.load('adapter\\adapter_final.pth'))
+adapter.load_state_dict(torch.load('random_adapter\\adapter_final.pth'))
 
 # w
 

@@ -4,6 +4,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from scipy.stats import wasserstein_distance
+import numpy as np
 from gan1 import Generator
 from classifier import Classifier
 
@@ -13,9 +14,8 @@ import functools
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-os.makedirs('adapter', exist_ok=True)
-os.makedirs('critic', exist_ok=True)
-
+os.makedirs('random_adapter', exist_ok=True)
+os.makedirs('random_critic', exist_ok=True)
 
 class Adapter(nn.Module):
     def __init__(self):
@@ -79,6 +79,7 @@ critic = Critic().to(device)
 lr = 1e-4
 lambda_gp = 10
 n_epochs = 100 
+# n_epochs = 1
 
 # critic_optimizer = optim.RMSprop(critic.parameters(), lr=lr)
 critic_optimizer = optim.Adam(critic.parameters(), lr=lr, betas = (0.0, 0.9))
@@ -175,11 +176,17 @@ if __name__   == '__main__':
             with torch.no_grad(): 
                 real_images, real_classes = data
 
+                real_random_classes = torch.tensor(list(np.random.randint(low = 0, high = 10, size = batch_size)))
+
                 z = torch.randn(batch_size, 100)
 
-                generator_out =  pass_value_throgh_generator(z, real_classes, generator_base_layers)
+                # generator_out =  pass_value_throgh_generator(z, real_classes, generator_base_layers) # previous version
+
+                generator_out =  pass_value_throgh_generator(z, real_random_classes, generator_base_layers)
 
                 classifier_in = pass_value_throgh_classifier(real_images, classifier_base_layers)
+
+
 
             real_data = classifier_in.to(device)
             batch_size = real_data.size(0)
@@ -226,8 +233,8 @@ if __name__   == '__main__':
             
 
         if epoch % 10 == 0: 
-            torch.save(adapter.state_dict(), f'adapter/adapter_{epoch}.pth')
-            torch.save(critic.state_dict(), f'critic/critic_{epoch}.pth')
+            torch.save(adapter.state_dict(), f'random_adapter/adapter_{epoch}.pth')
+            torch.save(critic.state_dict(), f'random_critic/critic_{epoch}.pth')
 
-    torch.save(adapter.state_dict(), 'adapter/adapter_final.pth')
-    torch.save(critic.state_dict(), 'critic/critic_final.pth')
+    torch.save(adapter.state_dict(), 'random_adapter/adapter_final.pth')
+    torch.save(critic.state_dict(), 'random_critic/critic_final.pth')
